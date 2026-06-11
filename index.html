@@ -275,39 +275,91 @@ function AllMatches({ matches, isAdmin, onEdit }) {
 }
 
 // ── LEADERBOARD ───────────────────────────────────────────────────────────────
-function Leaderboard({ ranked }) {
+// Max knockout pts per team assuming they win everything:
+// R32(4) + R16(4) + QF(4) + SF(4) + Final win(4) + WC bonus(5) = 25
+const KNOCKOUT_MAX = 25;
+
+function teamGroupPts(team, matches) {
+  const t = norm(team);
+  let pts = 0, played = 0;
+  matches.forEach(m => {
+    if (m.homeScore == null || m.awayScore == null) return;
+    const isHome = norm(m.home) === t;
+    const isAway = norm(m.away) === t;
+    if (!isHome && !isAway) return;
+    played++;
+    if (isHome) { if (m.homeScore > m.awayScore) pts+=3; else if (m.homeScore===m.awayScore) pts+=1; }
+    if (isAway) { if (m.awayScore > m.homeScore) pts+=3; else if (m.homeScore===m.awayScore) pts+=1; }
+  });
+  return { pts, played };
+}
+
+function calcMaxPts(playerTeams, matches) {
+  let extra = 0;
+
+  // Group stage: 3pts per remaining unplayed game
+  playerTeams.forEach(team => {
+    const t = norm(team);
+    matches.forEach(m => {
+      if (m.homeScore != null && m.awayScore != null) return;
+      if (norm(m.home) === t || norm(m.away) === t) extra += 3;
+    });
+  });
+
+  // Knockout stage: 25pts per team still alive
+  // A team is eliminated only if they've played all 3 group games and have 0 pts
+  playerTeams.forEach(team => {
+    const { pts, played } = teamGroupPts(team, matches);
+    const eliminated = played >= 3 && pts === 0;
+    if (!eliminated) extra += KNOCKOUT_MAX;
+  });
+
+  return extra;
+}
+
+function Leaderboard({ ranked, matches }) {
   const medals = ["🥇","🥈","🥉"];
   return (
     <div>
       <h2 style={{margin:"0 0 16px",fontSize:22,fontWeight:700,fontFamily:"'Bebas Neue',sans-serif",letterSpacing:"0.05em",color:WC_LIGHT}}>Season Standings</h2>
       <div style={{display:"flex",flexDirection:"column",gap:8}}>
-        {ranked.map((p,i) => (
+        {ranked.map((p,i) => {
+          const maxPts = calcMaxPts(p.teams, matches);
+          const potential = p.pts + maxPts;
+
+          return (
           <div key={p.name} style={{
             background: i===0 ? `linear-gradient(135deg,#1a2350,#0f1530)` : "#111827",
             border: `1px solid ${i===0?WC_BLUE+"88":i===1?"#2a3a5a":"#1e2740"}`,
-            borderRadius:12,padding:"14px 18px",display:"flex",alignItems:"center",gap:12,
+            borderRadius:12,padding:"14px 18px",
             position:"relative",overflow:"hidden",
           }}>
             {i===0 && <div style={{position:"absolute",top:0,left:0,right:0,height:2,background:`linear-gradient(90deg,${WC_RED},${WC_BLUE})`}}/>}
-            <div style={{width:34,textAlign:"center",fontSize:i<3?24:14,fontWeight:800,color:i<3?"#fff":"#3a4a7a",fontFamily:i>=3?"'Bebas Neue',sans-serif":"inherit"}}>
-              {medals[i]||i+1}
-            </div>
-            <div style={{flex:1}}>
-              <div style={{fontWeight:800,fontSize:16,marginBottom:4,fontFamily:"'Bebas Neue',sans-serif",letterSpacing:"0.03em"}}>{p.name}</div>
-              <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
-                {p.teams.map(t=>(
-                  <span key={t} style={{fontSize:11,color:"#7a8fc4",background:"#0d1226",borderRadius:5,padding:"2px 8px",fontWeight:600}}>
-                    {flag(t)} {t}
-                  </span>
-                ))}
+            <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:10}}>
+              <div style={{width:34,textAlign:"center",fontSize:i<3?24:14,fontWeight:800,color:i<3?"#fff":"#3a4a7a",fontFamily:i>=3?"'Bebas Neue',sans-serif":"inherit"}}>
+                {medals[i]||i+1}
+              </div>
+              <div style={{flex:1}}>
+                <div style={{fontWeight:800,fontSize:16,marginBottom:4,fontFamily:"'Bebas Neue',sans-serif",letterSpacing:"0.03em"}}>{p.name}</div>
+                <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+                  {p.teams.map(t=>(
+                    <span key={t} style={{fontSize:11,color:"#7a8fc4",background:"#0d1226",borderRadius:5,padding:"2px 8px",fontWeight:600}}>
+                      {flag(t)} {t}
+                    </span>
+                  ))}
+                </div>
+              </div>
+              <div style={{textAlign:"right",minWidth:60}}>
+                <div style={{fontSize:30,fontWeight:800,color:i===0?WC_RED:WC_LIGHT,lineHeight:1,fontFamily:"'Bebas Neue',sans-serif"}}>{p.pts}</div>
+                <div style={{fontSize:10,color:"#3a4a7a",textTransform:"uppercase",letterSpacing:"0.1em",fontWeight:700}}>pts</div>
               </div>
             </div>
-            <div style={{textAlign:"right"}}>
-              <div style={{fontSize:30,fontWeight:800,color:i===0?WC_RED:WC_LIGHT,lineHeight:1,fontFamily:"'Bebas Neue',sans-serif"}}>{p.pts}</div>
-              <div style={{fontSize:10,color:"#3a4a7a",textTransform:"uppercase",letterSpacing:"0.1em",fontWeight:700}}>pts</div>
+            <div style={{position:"absolute",bottom:8,right:12,fontSize:10,color:"#3a4a7a",fontWeight:600}}>
+              max {potential} pts
             </div>
           </div>
-        ))}
+          );
+        })}
       </div>
       <ScoringKey/>
     </div>
@@ -474,7 +526,7 @@ function App() {
 
       {/* CONTENT */}
       <div style={{maxWidth:960,margin:"0 auto",padding:"24px 20px"}}>
-        {tab==="leaderboard"&&<Leaderboard ranked={ranked}/>}
+        {tab==="leaderboard"&&<Leaderboard ranked={ranked} matches={matches}/>}
         
         {tab==="today"&&<MatchList matches={matches.filter(m=>m.date===todayS)} title={`Today · ${fmtD(todayS)}`} isAdmin={isAdmin} onEdit={setEditMatch}/>}
         
