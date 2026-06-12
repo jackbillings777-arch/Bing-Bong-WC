@@ -185,11 +185,12 @@ const saveDat = m => { try{localStorage.setItem(SK,JSON.stringify(m));}catch{} }
 const applyMap = (base,map) => !map?base:base.map(m=>{const s=map[m.home+"|"+m.away+"|"+m.date];return s?.homeScore!=null?{...m,...s}:m;});
 const buildMap = ms => { const o={}; ms.forEach(m=>{if(m.homeScore!=null&&m.awayScore!=null)o[m.home+"|"+m.away+"|"+m.date]={homeScore:m.homeScore,awayScore:m.awayScore};}); return o; };
 
-const now = new Date();
-const toStr = d => d.toISOString().split("T")[0];
-const todayS = toStr(now);
-const ydD = new Date(now); ydD.setDate(ydD.getDate()-1); const ydS = toStr(ydD);
-const tmD = new Date(now); tmD.setDate(tmD.getDate()+1); const tmS = toStr(tmD);
+// Always use PT (America/Los_Angeles) for date boundaries
+const todayS = new Date().toLocaleDateString("en-CA", {timeZone:"America/Los_Angeles"});
+const ydD = new Date(); ydD.setDate(ydD.getDate()-1);
+const ydS = ydD.toLocaleDateString("en-CA", {timeZone:"America/Los_Angeles"});
+const tmD = new Date(); tmD.setDate(tmD.getDate()+1);
+const tmS = tmD.toLocaleDateString("en-CA", {timeZone:"America/Los_Angeles"});
 const fmtD = d => new Date(d+"T12:00:00").toLocaleDateString("en-US",{weekday:"short",month:"short",day:"numeric"});
 const fmtT = t => { const[h,m]=t.split(":").map(Number); return `${h%12||12}:${String(m).padStart(2,"0")} ${h>=12?"PM":"AM"} PT`; };
 
@@ -326,18 +327,20 @@ function Leaderboard({ ranked, matches }) {
         {ranked.map((p,i) => {
           const maxPts = calcMaxPts(p.teams, matches);
           const potential = p.pts + maxPts;
-
+          // Rank accounting for ties: count how many players have strictly more pts
+          const rank = ranked.filter(o => o.pts > p.pts).length;
+          const isTop = rank === 0;
           return (
           <div key={p.name} style={{
-            background: i===0 ? `linear-gradient(135deg,#1a2350,#0f1530)` : "#111827",
-            border: `1px solid ${i===0?WC_BLUE+"88":i===1?"#2a3a5a":"#1e2740"}`,
+            background: isTop ? `linear-gradient(135deg,#1a2350,#0f1530)` : "#111827",
+            border: `1px solid ${isTop?WC_BLUE+"88":rank===1?"#2a3a5a":"#1e2740"}`,
             borderRadius:12,padding:"14px 18px",
             position:"relative",overflow:"hidden",
           }}>
-            {i===0 && <div style={{position:"absolute",top:0,left:0,right:0,height:2,background:`linear-gradient(90deg,${WC_RED},${WC_BLUE})`}}/>}
+            {isTop && <div style={{position:"absolute",top:0,left:0,right:0,height:2,background:`linear-gradient(90deg,${WC_RED},${WC_BLUE})`}}/>}
             <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:10}}>
-              <div style={{width:34,textAlign:"center",fontSize:i<3?24:14,fontWeight:800,color:i<3?"#fff":"#3a4a7a",fontFamily:i>=3?"'Bebas Neue',sans-serif":"inherit"}}>
-                {medals[i]||i+1}
+              <div style={{width:34,textAlign:"center",fontSize:rank<3?24:14,fontWeight:800,color:rank<3?"#fff":"#3a4a7a",fontFamily:rank>=3?"'Bebas Neue',sans-serif":"inherit"}}>
+                {medals[rank]||rank+1}
               </div>
               <div style={{flex:1}}>
                 <div style={{fontWeight:800,fontSize:16,marginBottom:4,fontFamily:"'Bebas Neue',sans-serif",letterSpacing:"0.03em"}}>{p.name}</div>
@@ -350,7 +353,7 @@ function Leaderboard({ ranked, matches }) {
                 </div>
               </div>
               <div style={{textAlign:"right",minWidth:60}}>
-                <div style={{fontSize:30,fontWeight:800,color:i===0?WC_RED:WC_LIGHT,lineHeight:1,fontFamily:"'Bebas Neue',sans-serif"}}>{p.pts}</div>
+                <div style={{fontSize:30,fontWeight:800,color:isTop?WC_RED:WC_LIGHT,lineHeight:1,fontFamily:"'Bebas Neue',sans-serif"}}>{p.pts}</div>
                 <div style={{fontSize:10,color:"#3a4a7a",textTransform:"uppercase",letterSpacing:"0.1em",fontWeight:700}}>pts</div>
               </div>
             </div>
