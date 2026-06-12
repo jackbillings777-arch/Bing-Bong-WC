@@ -189,19 +189,28 @@ const loadSaved = () => { try { const v=localStorage.getItem(SK); return v?JSON.
 const saveDat = async m => {
   try { localStorage.setItem(SK,JSON.stringify(m)); } catch{}
   try {
-    await fetch(JSONBIN_URL, {
+    const resp = await fetch(JSONBIN_URL, {
       method:"PUT",
-      headers:{"Content-Type":"application/json","X-Master-Key":JSONBIN_KEY,"X-Bin-Versioning":"false"},
+      headers:{
+        "Content-Type":"application/json",
+        "X-Master-Key":JSONBIN_KEY,
+        "X-Bin-Versioning":"false"
+      },
       body:JSON.stringify(m)
     });
-  } catch(e){ console.warn("JSONbin save failed",e); }
+    if (!resp.ok) { const txt = await resp.text(); console.warn("JSONbin save failed", resp.status, txt); }
+    else { console.log("JSONbin save OK"); }
+  } catch(e){ console.warn("JSONbin save error",e); }
 };
 const loadRemote = async () => {
   try {
-    const r = await fetch(JSONBIN_URL+"/latest", {headers:{"X-Master-Key":JSONBIN_KEY}});
+    const r = await fetch(JSONBIN_URL+"/latest", {
+      headers:{"X-Master-Key":JSONBIN_KEY,"X-Bin-Meta":"false"}
+    });
+    if (!r.ok) { console.warn("JSONbin load failed", r.status, await r.text()); return null; }
     const d = await r.json();
-    return d.record || null;
-  } catch(e) { return null; }
+    return d.record || d || null;
+  } catch(e) { console.warn("JSONbin load error",e); return null; }
 };
 const applyMap = (base,map) => !map?base:base.map(m=>{const s=map[m.home+"|"+m.away+"|"+m.date];return s?.homeScore!=null?{...m,...s}:m;});
 const buildMap = ms => { const o={}; ms.forEach(m=>{if(m.homeScore!=null&&m.awayScore!=null)o[m.home+"|"+m.away+"|"+m.date]={homeScore:m.homeScore,awayScore:m.awayScore};}); return o; };
@@ -583,3 +592,4 @@ ReactDOM.render(<App/>, document.getElementById("root"));
 </script>
 </body>
 </html>
+
