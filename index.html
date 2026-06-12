@@ -180,8 +180,8 @@ function calcScores(matches) {
 }
 
 const SK = "bingbong-wc-2026";
-const JSONBIN_ID = "6a2b97cff5f4af5e29e44e63";
-const JSONBIN_KEY = "$2a$10$7YpbJOI0.PMRuJ.TUd/ptuZ1NaGyHcfCBxQZg.c0sX2ZR.sdQiJDO";
+const JSONBIN_ID = "6a2b9fb4f5f4af5e29e46cb4";
+const JSONBIN_KEY = "$2a$10$Sg/ZbJI2h/CYyvUtQWYKp.4bqz01KCG6m/2k5U9LrMZdsW7fBK7Nu";
 const JSONBIN_URL = `https://api.jsonbin.io/v3/b/${JSONBIN_ID}`;
 
 // Also keep localStorage as cache for instant load
@@ -205,9 +205,9 @@ const saveDat = async m => {
 const loadRemote = async () => {
   try {
     const r = await fetch(JSONBIN_URL+"/latest", {
-      headers:{"X-Master-Key":JSONBIN_KEY,"X-Bin-Meta":"false"}
+      headers:{"X-Bin-Meta":"false"}
     });
-    if (!r.ok) { console.warn("JSONbin load failed", r.status, await r.text()); return null; }
+    if (!r.ok) { console.warn("JSONbin load failed", r.status); return null; }
     const d = await r.json();
     return d.record || d || null;
   } catch(e) { console.warn("JSONbin load error",e); return null; }
