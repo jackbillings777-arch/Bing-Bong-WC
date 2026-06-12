@@ -180,8 +180,29 @@ function calcScores(matches) {
 }
 
 const SK = "bingbong-wc-2026";
+const JSONBIN_ID = "6a2b97cff5f4af5e29e44e63";
+const JSONBIN_KEY = "$2a$10$7YpbJOI0.PMRuJ.TUd/ptuZ1NaGyHcfCBxQZg.c0sX2ZR.sdQiJDO";
+const JSONBIN_URL = `https://api.jsonbin.io/v3/b/${JSONBIN_ID}`;
+
+// Also keep localStorage as cache for instant load
 const loadSaved = () => { try { const v=localStorage.getItem(SK); return v?JSON.parse(v):null; } catch{return null;} };
-const saveDat = m => { try{localStorage.setItem(SK,JSON.stringify(m));}catch{} };
+const saveDat = async m => {
+  try { localStorage.setItem(SK,JSON.stringify(m)); } catch{}
+  try {
+    await fetch(JSONBIN_URL, {
+      method:"PUT",
+      headers:{"Content-Type":"application/json","X-Master-Key":JSONBIN_KEY,"X-Bin-Versioning":"false"},
+      body:JSON.stringify(m)
+    });
+  } catch(e){ console.warn("JSONbin save failed",e); }
+};
+const loadRemote = async () => {
+  try {
+    const r = await fetch(JSONBIN_URL+"/latest", {headers:{"X-Master-Key":JSONBIN_KEY}});
+    const d = await r.json();
+    return d.record || null;
+  } catch(e) { return null; }
+};
 const applyMap = (base,map) => !map?base:base.map(m=>{const s=map[m.home+"|"+m.away+"|"+m.date];return s?.homeScore!=null?{...m,...s}:m;});
 const buildMap = ms => { const o={}; ms.forEach(m=>{if(m.homeScore!=null&&m.awayScore!=null)o[m.home+"|"+m.away+"|"+m.date]={homeScore:m.homeScore,awayScore:m.awayScore};}); return o; };
 
@@ -452,10 +473,28 @@ function App() {
   const saved = loadSaved();
   const [matches,setMatches]=useState(()=>applyMap(ALL_MATCHES,saved));
   const [lastSaved,setLastSaved]=useState(()=>saved?._updatedAt?new Date(saved._updatedAt):null);
+  const [syncing,setSyncing]=useState(true);
   const [tab,setTab]=useState("leaderboard");
   const [isAdmin,setIsAdmin]=useState(false);
   const [showPin,setShowPin]=useState(false);
   const [editMatch,setEditMatch]=useState(null);
+
+  // On mount: load from JSONbin so all viewers see latest scores
+  React.useEffect(() => {
+    (async () => {
+      const remote = await loadRemote();
+      if (remote && remote._updatedAt) {
+        const localTs = saved?._updatedAt || "";
+        // Use whichever is newer
+        if (!localTs || remote._updatedAt > localTs) {
+          setMatches(applyMap(ALL_MATCHES, remote));
+          setLastSaved(new Date(remote._updatedAt));
+          try { localStorage.setItem(SK, JSON.stringify(remote)); } catch{}
+        }
+      }
+      setSyncing(false);
+    })();
+  }, []);
 
   const handleSaveScore = useCallback((match,hs,as_) => {
     const updated = matches.map(m => m.home===match.home&&m.away===match.away&&m.date===match.date ? {...m,homeScore:hs,awayScore:as_} : m);
@@ -505,7 +544,7 @@ function App() {
 
           {/* Status */}
           <div style={{fontSize:11,color:"#3a4a7a",marginBottom:12,fontWeight:600}}>
-            {lastSaved ? `✅ Last updated ${lastSaved.toLocaleString()}` : "No scores entered yet"}
+            {syncing ? "⏳ Syncing scores..." : lastSaved ? `✅ Last updated ${lastSaved.toLocaleString()}` : "No scores entered yet"}
           </div>
 
           {/* Tabs */}
@@ -544,4 +583,3 @@ ReactDOM.render(<App/>, document.getElementById("root"));
 </script>
 </body>
 </html>
-
