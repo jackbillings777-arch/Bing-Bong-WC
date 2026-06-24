@@ -170,18 +170,18 @@ const KNOCKOUT_MATCHES = [
   {round:"R32", slot:2, date:"2026-06-29", time:"10:00", venue:"Houston", desc:"Match 76: Winner C vs Runner-up F", home:null, away:null, homeScore:null, awayScore:null, penaltyWinner:null},
   {round:"R32", slot:3, date:"2026-06-29", time:"13:30", venue:"Foxborough", desc:"Match 74: Winner E vs Best 3rd (A/B/C/D/F)", home:null, away:null, homeScore:null, awayScore:null, penaltyWinner:null},
   {round:"R32", slot:4, date:"2026-06-29", time:"18:00", venue:"Monterrey", desc:"Match 75: Winner F vs Runner-up C", home:null, away:null, homeScore:null, awayScore:null, penaltyWinner:null},
-  {round:"R32", slot:5, date:"2026-06-30", time:"10:00", venue:"Dallas", desc:"Match 78: Runner-up E vs Runner-up I", home:null, away:null, homeScore:null, awayScore:null, penaltyWinner:null},
+  {round:"R32", slot:5, date:"2026-06-30", time:"10:00", venue:"Arlington", desc:"Match 78: Runner-up E vs Runner-up I", home:null, away:null, homeScore:null, awayScore:null, penaltyWinner:null},
   {round:"R32", slot:6, date:"2026-06-30", time:"14:00", venue:"New York/NJ", desc:"Match 77: Winner I vs Best 3rd (C/D/F/G/H)", home:null, away:null, homeScore:null, awayScore:null, penaltyWinner:null},
   {round:"R32", slot:7, date:"2026-06-30", time:"18:00", venue:"Mexico City", desc:"Match 79: Winner A vs Best 3rd (C/E/F/H/I)", home:null, away:null, homeScore:null, awayScore:null, penaltyWinner:null},
   {round:"R32", slot:8, date:"2026-07-01", time:"09:00", venue:"Atlanta", desc:"Match 80: Winner L vs Best 3rd (E/H/I/J/K)", home:null, away:null, homeScore:null, awayScore:null, penaltyWinner:null},
   {round:"R32", slot:9, date:"2026-07-01", time:"13:00", venue:"Seattle", desc:"Match 82: Winner G vs Best 3rd (A/E/H/I/J)", home:null, away:null, homeScore:null, awayScore:null, penaltyWinner:null},
   {round:"R32", slot:10, date:"2026-07-01", time:"17:00", venue:"Santa Clara", desc:"Match 81: Winner D vs Best 3rd (B/E/F/I/J)", home:null, away:null, homeScore:null, awayScore:null, penaltyWinner:null},
-  {round:"R32", slot:11, date:"2026-07-02", time:"11:00", venue:"Arlington", desc:"Match 88: Runner-up D vs Runner-up G", home:null, away:null, homeScore:null, awayScore:null, penaltyWinner:null},
-  {round:"R32", slot:12, date:"2026-07-02", time:"15:00", venue:"Miami", desc:"Match 86: Winner J vs Runner-up H", home:null, away:null, homeScore:null, awayScore:null, penaltyWinner:null},
-  {round:"R32", slot:13, date:"2026-07-02", time:"18:30", venue:"Kansas City", desc:"Match 87: Winner K vs Best 3rd (D/E/I/J/L)", home:null, away:null, homeScore:null, awayScore:null, penaltyWinner:null},
-  {round:"R32", slot:14, date:"2026-07-03", time:"12:00", venue:"Inglewood", desc:"Match 84: Winner H vs Runner-up J", home:null, away:null, homeScore:null, awayScore:null, penaltyWinner:null},
-  {round:"R32", slot:15, date:"2026-07-03", time:"16:00", venue:"Toronto", desc:"Match 83: Runner-up K vs Runner-up L", home:null, away:null, homeScore:null, awayScore:null, penaltyWinner:null},
-  {round:"R32", slot:16, date:"2026-07-03", time:"20:00", venue:"Vancouver", desc:"Match 85: Winner B vs Best 3rd (E/F/G/I/J)", home:null, away:null, homeScore:null, awayScore:null, penaltyWinner:null},
+  {round:"R32", slot:11, date:"2026-07-02", time:"12:00", venue:"Inglewood", desc:"Match 84: Winner H vs Runner-up J", home:null, away:null, homeScore:null, awayScore:null, penaltyWinner:null},
+  {round:"R32", slot:12, date:"2026-07-02", time:"16:00", venue:"Toronto", desc:"Match 83: Runner-up K vs Runner-up L", home:null, away:null, homeScore:null, awayScore:null, penaltyWinner:null},
+  {round:"R32", slot:13, date:"2026-07-02", time:"20:00", venue:"Vancouver", desc:"Match 85: Winner B vs Best 3rd (E/F/G/I/J)", home:null, away:null, homeScore:null, awayScore:null, penaltyWinner:null},
+  {round:"R32", slot:14, date:"2026-07-03", time:"11:00", venue:"Arlington", desc:"Match 88: Runner-up D vs Runner-up G", home:null, away:null, homeScore:null, awayScore:null, penaltyWinner:null},
+  {round:"R32", slot:15, date:"2026-07-03", time:"15:00", venue:"Miami", desc:"Match 86: Winner J vs Runner-up H", home:null, away:null, homeScore:null, awayScore:null, penaltyWinner:null},
+  {round:"R32", slot:16, date:"2026-07-03", time:"18:30", venue:"Kansas City", desc:"Match 87: Winner K vs Best 3rd (D/E/I/J/L)", home:null, away:null, homeScore:null, awayScore:null, penaltyWinner:null},
 
   // Round of 16 — July 4-7
   {round:"R16", slot:1, date:"2026-07-04", time:"10:00", venue:"Houston", desc:"Match 90: Winner 73 vs Winner 75", home:null, away:null, homeScore:null, awayScore:null, penaltyWinner:null},
@@ -354,19 +354,25 @@ const fmtT = t => { const[h,m]=t.split(":").map(Number); return `${h%12||12}:${S
 
 // ── MATCH CARD ────────────────────────────────────────────────────────────────
 function MatchCard({ m, isAdmin, onEdit, compact }) {
-  const home = norm(m.home), away = norm(m.away);
-  const hp = t2p[home], ap = t2p[away];
+  const isKO = !!m.round;
+  const home = m.home ? norm(m.home) : null;
+  const away = m.away ? norm(m.away) : null;
+  const hp = home ? t2p[home] : null;
+  const ap = away ? t2p[away] : null;
   const has = m.homeScore != null && m.awayScore != null;
   return (
     <div style={{background:"#111827",border:`1px solid ${has?"#2A398D33":"#1e2740"}`,borderRadius:12,padding:compact?"10px 14px":"14px 18px",position:"relative",overflow:"hidden"}}>
       {has && <div style={{position:"absolute",top:0,left:0,right:0,height:2,background:`linear-gradient(90deg,${WC_RED},${WC_BLUE})`}}/>}
       <div style={{display:"flex",justifyContent:"space-between",marginBottom:8,fontSize:11,color:"#4a5e8a"}}>
-        <span style={{background:"#1a2340",borderRadius:4,padding:"2px 7px",fontWeight:700,color:"#7a8fc4",letterSpacing:"0.05em"}}>GRP {m.group}</span>
+        <span style={{background:"#1a2340",borderRadius:4,padding:"2px 7px",fontWeight:700,color:"#7a8fc4",letterSpacing:"0.05em"}}>{isKO ? ROUND_LABELS[m.round] : `GRP ${m.group}`}</span>
         <span>{m.venue} · {fmtT(m.time)}</span>
       </div>
+      {isKO && m.desc && !m.home && !m.away && (
+        <div style={{fontSize:10,color:"#4a5a8a",marginBottom:8,fontStyle:"italic"}}>{m.desc}</div>
+      )}
       <div style={{display:"grid",gridTemplateColumns:"1fr auto 1fr",alignItems:"center",gap:10}}>
         <div style={{textAlign:"right"}}>
-          <div style={{fontSize:compact?13:15,fontWeight:700}}>{flag(home)} {home}</div>
+          <div style={{fontSize:compact?13:15,fontWeight:700}}>{home ? `${flag(home)} ${home}` : "TBD"}</div>
           {hp&&<div style={{fontSize:10,color:"#ffffff",marginTop:2,fontWeight:600}}>{hp}</div>}
         </div>
         <div style={{background:has?"#1a2a50":"#0d1528",borderRadius:8,padding:compact?"6px 10px":"8px 14px",textAlign:"center",minWidth:compact?54:70,border:`1px solid ${has?WC_BLUE+"44":"#1e2740"}`}}>
@@ -375,7 +381,7 @@ function MatchCard({ m, isAdmin, onEdit, compact }) {
             : <div style={{fontSize:11,color:"#4a5a8a",fontWeight:700,fontFamily:"'Bebas Neue',sans-serif",letterSpacing:"0.1em"}}>VS</div>}
         </div>
         <div style={{textAlign:"left"}}>
-          <div style={{fontSize:compact?13:15,fontWeight:700}}>{flag(away)} {away}</div>
+          <div style={{fontSize:compact?13:15,fontWeight:700}}>{away ? `${flag(away)} ${away}` : "TBD"}</div>
           {ap&&<div style={{fontSize:10,color:"#ffffff",marginTop:2,fontWeight:600}}>{ap}</div>}
         </div>
       </div>
@@ -505,25 +511,32 @@ function teamRecord(team, matches) {
   return {w,d,l,played};
 }
 
-function teamAdvanced(team, koMatches) {
-  if (!koMatches) return false;
+// Returns the most advanced round a team currently sits in, or null if not in the bracket
+// or already eliminated. "Currently sits in" = the round of the latest match they appear in
+// that they haven't lost.
+function teamCurrentRound(team, koMatches) {
+  if (!koMatches) return null;
   const t = norm(team);
-  // Team is "advanced" if it appears in the bracket AND hasn't been eliminated.
-  // Eliminated = appeared in a completed match (winner determined) and lost.
-  let appeared = false;
+  let bestRoundIdx = -1;
   let eliminated = false;
+
   koMatches.forEach(m => {
     const isHome = m.home && norm(m.home) === t;
     const isAway = m.away && norm(m.away) === t;
     if (!isHome && !isAway) return;
-    appeared = true;
     const w = koWinner(m);
-    if (w) {
-      const lostThis = (isHome && w === "away") || (isAway && w === "home");
-      if (lostThis) eliminated = true;
-    }
+    const lostThis = w && ((isHome && w === "away") || (isAway && w === "home"));
+    if (lostThis) { eliminated = true; return; }
+    const idx = ROUND_ORDER.indexOf(m.round);
+    if (idx > bestRoundIdx) bestRoundIdx = idx;
   });
-  return appeared && !eliminated;
+
+  if (eliminated || bestRoundIdx === -1) return null;
+  return ROUND_ORDER[bestRoundIdx];
+}
+
+function teamAdvanced(team, koMatches) {
+  return teamCurrentRound(team, koMatches) !== null;
 }
 
 function Leaderboard({ ranked, matches, koMatches }) {
@@ -580,14 +593,14 @@ function Leaderboard({ ranked, matches, koMatches }) {
                   const pts = teamPts(t, matches);
                   const {w,d,l,played} = teamRecord(t, matches);
                   const remaining = matches.filter(m => (norm(m.home)===norm(t)||norm(m.away)===norm(t)) && m.homeScore==null).length;
-                  const advanced = teamAdvanced(t, koMatches);
+                  const currentRound = teamCurrentRound(t, koMatches);
                   return (
                     <div key={t} style={{display:"flex",alignItems:"center",gap:12,padding:"8px 0",borderBottom:"1px solid #1a2240"}}>
                       <div style={{fontSize:20}}>{flag(t)}</div>
                       <div style={{flex:1}}>
                         <div style={{fontSize:13,fontWeight:700,color:WC_LIGHT,display:"flex",alignItems:"center",gap:6}}>
                           {t}
-                          {advanced && <span style={{fontSize:10,color:WC_GOLD,fontWeight:700,background:"#1f1a0d",border:`1px solid ${WC_GOLD}66`,borderRadius:4,padding:"1px 6px"}}>ADVANCED</span>}
+                          {currentRound && <span style={{fontSize:10,color:WC_GOLD,fontWeight:700,background:"#1f1a0d",border:`1px solid ${WC_GOLD}66`,borderRadius:4,padding:"1px 6px"}}>{ROUND_LABELS[currentRound].toUpperCase()}</span>}
                         </div>
                         <div style={{fontSize:11,color:"#4a5a8a",marginTop:2}}>
                           {played>0 ? `${w}W ${d}D ${l}L` : "No games played"}{remaining>0?` · ${remaining} left`:""}
@@ -901,8 +914,8 @@ function App() {
   const TABS = [
     {id:"leaderboard", label:"🏅", full:"Standings"},
     {id:"today",       label:"⚽", full:"Today"},
-    {id:"all",         label:"📋", full:"All Matches"},
     {id:"bracket",     label:"🏆", full:"Bracket"},
+    {id:"all",         label:"📋", full:"Group Matches"},
     ...(isAdmin?[{id:"admin",label:"⚙️",full:"Admin"}]:[]),
   ];
 
@@ -964,7 +977,12 @@ function App() {
       <div style={{maxWidth:960,margin:"0 auto",padding:"24px 20px"}}>
         {tab==="leaderboard"&&<Leaderboard ranked={ranked} matches={matches} koMatches={koMatches}/>}
         
-        {tab==="today"&&<MatchList matches={matches.filter(m=>m.date===todayS)} title={`Today · ${fmtD(todayS)}`} isAdmin={isAdmin} onEdit={setEditMatch}/>}
+        {tab==="today"&&<MatchList
+          matches={[...matches.filter(m=>m.date===todayS), ...koMatches.filter(m=>m.date===todayS)]}
+          title={`Today · ${fmtD(todayS)}`}
+          isAdmin={isAdmin}
+          onEdit={(m)=>m.round?setEditKO(m):setEditMatch(m)}
+        />}
         
         {tab==="all"&&<AllMatches matches={matches} isAdmin={isAdmin} onEdit={setEditMatch}/>}
         {tab==="bracket"&&<Bracket koMatches={koMatches} isAdmin={isAdmin} onEdit={setEditKO}/>}
