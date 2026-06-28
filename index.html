@@ -459,7 +459,33 @@ function teamGroupPts(team, matches) {
   return { pts, played };
 }
 
-function calcMaxPts(playerTeams, matches) {
+// Max additional knockout pts a team can still earn, counting only rounds
+// from their current position onward (so it shrinks as they're eliminated
+// round by round, not just all-or-nothing).
+function koMaxRemaining(team, koMatches) {
+  if (!koMatches || !koMatches.length) return KNOCKOUT_MAX; // bracket not seeded yet, assume full potential
+  const t = norm(team);
+
+  // Has this team appeared anywhere in the bracket?
+  const appeared = koMatches.some(m => (m.home && norm(m.home)===t) || (m.away && norm(m.away)===t));
+  if (!appeared) return 0; // didn't make the bracket (group stage exit), no knockout pts possible
+
+  const currentRound = teamCurrentRound(team, koMatches); // null if eliminated
+  if (!currentRound) return 0; // eliminated, no more pts possible
+
+  // Sum advancement pts for current round onward (best case: always win normal/ET, no pens)
+  const idx = ROUND_ORDER.indexOf(currentRound);
+  let max = 0;
+  for (let i = idx; i < ROUND_ORDER.length; i++) {
+    const r = ROUND_ORDER[i];
+    if (r === "3RD") continue; // handled separately, mutually exclusive with FINAL
+    if (r === "FINAL") max += KO_ADVANCE_PTS.FINAL + KO_WC_WIN_BONUS;
+    else max += KO_ADVANCE_PTS[r];
+  }
+  return max;
+}
+
+function calcMaxPts(playerTeams, matches, koMatches) {
   let extra = 0;
 
   // Group stage: 3pts per remaining unplayed game
@@ -471,12 +497,9 @@ function calcMaxPts(playerTeams, matches) {
     });
   });
 
-  // Knockout stage: 25pts per team still alive
-  // A team is eliminated only if they've played all 3 group games and have 0 pts
+  // Knockout stage: remaining potential based on actual bracket position
   playerTeams.forEach(team => {
-    const { pts, played } = teamGroupPts(team, matches);
-    const eliminated = played >= 3 && pts === 0;
-    if (!eliminated) extra += KNOCKOUT_MAX;
+    extra += koMaxRemaining(team, koMatches);
   });
 
   return extra;
@@ -539,6 +562,18 @@ function teamAdvanced(team, koMatches) {
   return teamCurrentRound(team, koMatches) !== null;
 }
 
+// A team is "eliminated" if the bracket has been seeded (has real teams in it) and
+// this team either never appeared (lost in groups) or appeared and lost a knockout match.
+function teamEliminated(team, koMatches) {
+  if (!koMatches || !koMatches.length) return false;
+  const bracketSeeded = koMatches.some(m => m.home || m.away);
+  if (!bracketSeeded) return false; // bracket empty, group stage still ongoing — nobody "eliminated" yet
+  const t = norm(team);
+  const appeared = koMatches.some(m => (m.home && norm(m.home)===t) || (m.away && norm(m.away)===t));
+  if (!appeared) return true; // didn't make the knockout bracket at all
+  return teamCurrentRound(team, koMatches) === null; // appeared but lost
+}
+
 function Leaderboard({ ranked, matches, koMatches }) {
   const medals = ["🥇","🥈","🥉"];
   const [expanded, setExpanded] = React.useState({});
@@ -549,7 +584,7 @@ function Leaderboard({ ranked, matches, koMatches }) {
       <h2 style={{margin:"0 0 16px",fontSize:22,fontWeight:700,fontFamily:"'Bebas Neue',sans-serif",letterSpacing:"0.05em",color:WC_LIGHT}}>Season Standings</h2>
       <div style={{display:"flex",flexDirection:"column",gap:8}}>
         {ranked.map((p,i) => {
-          const maxPts = calcMaxPts(p.teams, matches);
+          const maxPts = calcMaxPts(p.teams, matches, koMatches);
           const potential = p.pts + maxPts;
           const rank = ranked.filter(o => o.pts > p.pts).length;
           const isTop = rank === 0;
@@ -571,8 +606,17 @@ function Leaderboard({ ranked, matches, koMatches }) {
                 <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
                   {p.teams.map(t=>{
                     const advanced = teamAdvanced(t, koMatches);
+                    const eliminated = teamEliminated(t, koMatches);
                     return (
-                      <span key={t} style={{fontSize:11,color:advanced?WC_GOLD:"#7a8fc4",background:advanced?"#1f1a0d":"#0d1226",border:advanced?`1px solid ${WC_GOLD}66`:"none",borderRadius:5,padding:"2px 8px",fontWeight:600,display:"inline-flex",alignItems:"center",gap:3}}>
+                      <span key={t} style={{
+                        fontSize:11,
+                        color:eliminated?"#4a5a72":(advanced?WC_GOLD:"#7a8fc4"),
+                        background:eliminated?"#0d1226":(advanced?"#1f1a0d":"#0d1226"),
+                        border:advanced&&!eliminated?`1px solid ${WC_GOLD}66`:"none",
+                        borderRadius:5,padding:"2px 8px",fontWeight:600,display:"inline-flex",alignItems:"center",gap:3,
+                        textDecoration:eliminated?"line-through":"none",
+                        opacity:eliminated?0.6:1,
+                      }}>
                         {flag(t)} {t}
                       </span>
                     );
@@ -594,13 +638,15 @@ function Leaderboard({ ranked, matches, koMatches }) {
                   const {w,d,l,played} = teamRecord(t, matches);
                   const remaining = matches.filter(m => (norm(m.home)===norm(t)||norm(m.away)===norm(t)) && m.homeScore==null).length;
                   const currentRound = teamCurrentRound(t, koMatches);
+                  const eliminated = teamEliminated(t, koMatches);
                   return (
-                    <div key={t} style={{display:"flex",alignItems:"center",gap:12,padding:"8px 0",borderBottom:"1px solid #1a2240"}}>
+                    <div key={t} style={{display:"flex",alignItems:"center",gap:12,padding:"8px 0",borderBottom:"1px solid #1a2240",opacity:eliminated?0.55:1}}>
                       <div style={{fontSize:20}}>{flag(t)}</div>
                       <div style={{flex:1}}>
-                        <div style={{fontSize:13,fontWeight:700,color:WC_LIGHT,display:"flex",alignItems:"center",gap:6}}>
+                        <div style={{fontSize:13,fontWeight:700,color:eliminated?"#5a6a8a":WC_LIGHT,display:"flex",alignItems:"center",gap:6,textDecoration:eliminated?"line-through":"none"}}>
                           {t}
-                          {currentRound && <span style={{fontSize:10,color:WC_GOLD,fontWeight:700,background:"#1f1a0d",border:`1px solid ${WC_GOLD}66`,borderRadius:4,padding:"1px 6px"}}>{ROUND_LABELS[currentRound].toUpperCase()}</span>}
+                          {currentRound && <span style={{fontSize:10,color:WC_GOLD,fontWeight:700,background:"#1f1a0d",border:`1px solid ${WC_GOLD}66`,borderRadius:4,padding:"1px 6px",textDecoration:"none"}}>{ROUND_LABELS[currentRound].toUpperCase()}</span>}
+                          {eliminated && <span style={{fontSize:10,color:"#5a6a8a",fontWeight:700,textDecoration:"none"}}>ELIMINATED</span>}
                         </div>
                         <div style={{fontSize:11,color:"#4a5a8a",marginTop:2}}>
                           {played>0 ? `${w}W ${d}D ${l}L` : "No games played"}{remaining>0?` · ${remaining} left`:""}
